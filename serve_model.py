@@ -19,10 +19,10 @@ def read_root():
 # ChromaDB and SentenceTransformer setup
 client = chromadb.PersistentClient(path="./db")
 collection = client.get_collection("documents")
-embedding_model = SentenceTransformer("./../all-MiniLM-L6-v2")
+embedding_model = SentenceTransformer("./all-MiniLM-L6-v2")
 
 # Model and Tokenizer Configuration
-MODEL_NAME = "./../qwen3-0.6b-model"
+MODEL_NAME = "./qwen3-0.6b-model"
 
 # Determine the device to run the model on
 if torch.cuda.is_available():

@@ -7,7 +7,7 @@ client = chromadb.PersistentClient(path="./db")
 collection = client.get_or_create_collection("documents")
 
 # Initialize the embedding model
-embedding_model = SentenceTransformer("./../all-MiniLM-L6-v2")
+embedding_model = SentenceTransformer("./all-MiniLM-L6-v2")
 
 # Path to the data file
 data_file = "data/data.jsonl"
