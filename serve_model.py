@@ -5,6 +5,8 @@ from pydantic import BaseModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 import torch
 from threading import Thread
+import chromadb
+from sentence_transformers import SentenceTransformer
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -14,8 +16,13 @@ def read_root():
     print("server is running")
     return {"status": "Server is running"}
 
+# ChromaDB and SentenceTransformer setup
+client = chromadb.PersistentClient(path="./db")
+collection = client.get_collection("documents")
+embedding_model = SentenceTransformer("./../all-MiniLM-L6-v2")
+
 # Model and Tokenizer Configuration
-MODEL_NAME = "./../models/qwen3-0.6b-model"
+MODEL_NAME = "./../qwen3-0.6b-model"
 
 # Determine the device to run the model on
 if torch.cuda.is_available():
@@ -43,11 +50,24 @@ async def stream(request: StreamRequest):
     """
     Handles streaming text generation for a given prompt.
     """
+    # Embed the prompt and query ChromaDB
+    query_embedding = embedding_model.encode([request.prompt])[0].tolist()
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=10
+    )
+    
+    # Get the documents from the results
+    retrieved_documents = results['documents'][0]
+    
+    # Create the context string
+    context = "\n".join(retrieved_documents)
+    
     streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
 
     # Prepare the input for the model
     messages = [
-        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "system", "content": f"You are a helpful assistant. Use the following context to answer the user's question:\n\n{context}"},
         {"role": "user", "content": request.prompt}
     ]
     text = tokenizer.apply_chat_template(

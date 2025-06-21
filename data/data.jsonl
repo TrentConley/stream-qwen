@@ -1,0 +1,3 @@
+{"id": "doc1", "text": "This is the first document. It contains a paragraph about the basics of Retrieval-Augmented Generation (RAG). RAG models combine the power of pre-trained language models with external knowledge sources."}
+{"id": "doc2", "text": "The second document contains a list of items. Here are the key components of a RAG system: 1. A retriever, which fetches relevant documents. 2. A generator, which produces the final text. 3. An index, which stores the knowledge."}
+{"id": "doc3", "text": "The third document has a table. Here is a simple table of programming languages and their creators: | Language | Creator | |---|---| | Python | Guido van Rossum | | Java | James Gosling |"} 
