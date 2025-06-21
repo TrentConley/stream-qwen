@@ -5,8 +5,10 @@ from pydantic import BaseModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 import torch
 from threading import Thread
-import chromadb
+import faiss
 from sentence_transformers import SentenceTransformer
+import numpy as np
+import json
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -16,10 +18,13 @@ def read_root():
     print("server is running")
     return {"status": "Server is running"}
 
-# ChromaDB and SentenceTransformer setup
-client = chromadb.PersistentClient(path="./db")
-collection = client.get_collection("documents")
+# FAISS and SentenceTransformer setup
+print("Loading FAISS index and document map...")
+index = faiss.read_index("faiss_index.bin")
+with open("documents.json", 'r') as f:
+    doc_map = json.load(f)
 embedding_model = SentenceTransformer("./all-MiniLM-L6-v2")
+print("Loading complete.")
 
 # Model and Tokenizer Configuration
 MODEL_NAME = "./qwen3-0.6b-model"
@@ -50,15 +55,13 @@ async def stream(request: StreamRequest):
     """
     Handles streaming text generation for a given prompt.
     """
-    # Embed the prompt and query ChromaDB
-    query_embedding = embedding_model.encode([request.prompt])[0].tolist()
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=10
-    )
+    # Embed the prompt and query FAISS
+    query_embedding = embedding_model.encode([request.prompt], convert_to_numpy=True)
+    D, I = index.search(query_embedding, 10) # D: distances, I: indices
     
     # Get the documents from the results
-    retrieved_documents = results['documents'][0]
+    retrieved_indices = I[0]
+    retrieved_documents = [doc_map[str(i)]['text'] for i in retrieved_indices]
     
     # Create the context string
     context = "\n".join(retrieved_documents)

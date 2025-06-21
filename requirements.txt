@@ -3,5 +3,6 @@ uvicorn
 torch
 transformers
 sentence-transformers
-chromadb
-pydantic 
+faiss-cpu
+pydantic
+numpy 

@@ -1,44 +1,53 @@
-import chromadb
+import faiss
 from sentence_transformers import SentenceTransformer
 import json
-
-# Initialize ChromaDB client and create a collection
-client = chromadb.PersistentClient(path="./db")
-collection = client.get_or_create_collection("documents")
+import numpy as np
+import os
 
 # Initialize the embedding model
 embedding_model = SentenceTransformer("./all-MiniLM-L6-v2")
 
 # Path to the data file
 data_file = "data/data.jsonl"
+index_file = "faiss_index.bin"
+doc_map_file = "documents.json"
 
-# Read the data and ingest it into ChromaDB
+# Read the data
 documents = []
-metadatas = []
 ids = []
 
+print("Reading data...")
 with open(data_file, "r") as f:
     for line in f:
         item = json.loads(line)
-        # For simplicity, we'll embed the 'text' field.
-        # You can create a more sophisticated representation of your data
-        # by combining the paragraph, list, and table.
         documents.append(item["text"])
-        metadatas.append({"id": item["id"]})
         ids.append(item["id"])
 
+print("Generating embeddings...")
 # Generate embeddings
-embeddings = embedding_model.encode(documents)
+embeddings = embedding_model.encode(documents, convert_to_numpy=True)
 
-# Add to the collection
-collection.add(
-    embeddings=embeddings,
-    documents=documents,
-    metadatas=metadatas,
-    ids=ids
-)
+# Create a FAISS index
+d = embeddings.shape[1]  # Dimension of the embeddings
+index = faiss.IndexFlatL2(d)
+index = faiss.IndexIDMap(index) # Map vectors to original document IDs
 
-print("Data has been ingested into ChromaDB.")
+print("Adding embeddings to FAISS index...")
+# The IDs for FAISS must be integers, so we'll use the position in the list
+faiss_ids = np.array(range(len(documents)))
+index.add_with_ids(embeddings, faiss_ids)
+
+print(f"Saving FAISS index to {index_file}...")
+# Save the index to a file
+faiss.write_index(index, index_file)
+
+print(f"Saving document map to {doc_map_file}...")
+# Save the mapping from faiss_ids (0, 1, 2...) to original docs
+doc_map = {i: {"id": ids[i], "text": documents[i]} for i in range(len(documents))}
+with open(doc_map_file, 'w') as f:
+    json.dump(doc_map, f)
+
+print("Data has been ingested into FAISS.")
 
 # Example of how to query the collection
 query_text = "What is RAG?"
