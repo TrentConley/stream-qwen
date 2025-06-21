@@ -47,16 +47,4 @@ doc_map = {i: {"id": ids[i], "text": documents[i]} for i in range(len(documents)
 with open(doc_map_file, 'w') as f:
     json.dump(doc_map, f)
 
-print("Data has been ingested into FAISS.")
-
-# Example of how to query the collection
-query_text = "What is RAG?"
-query_embedding = embedding_model.encode([query_text])[0].tolist()
-
-results = collection.query(
-    query_embeddings=[query_embedding],
-    n_results=1
-)
-
-print("Example query results:")
-print(results) 
+print("Data has been ingested into FAISS.") 
